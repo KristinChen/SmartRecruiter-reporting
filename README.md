@@ -1,0 +1,1 @@
+# SmartRecruiter-reporting
