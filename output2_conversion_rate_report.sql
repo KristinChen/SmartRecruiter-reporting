@@ -185,7 +185,20 @@ and a2.jobLevel = e.jobLevel
 and a2.jobLocation = e.jobLocation
 ) a
 group by jobCapability, joblevel, joblocation, funnel, applicationAggStatus, applicationAggSubStatus
-)
+),
+tbl1 AS (
+select experiencedFlag, 1 OutFlag, jobCapability, jobLocation, funnel,applicationAggStatus, applicationAggSubStatus, sum(numApplicants) as totalNumApplicants from 
+(SELECT *, case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
+                when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM OutTotalConvertReportTable) f
+group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
+having experiencedFlag is not null
+union
+select experiencedFlag, 0 OutFlag, jobCapability, jobLocation, funnel,applicationAggStatus, applicationAggSubStatus, sum(numApplicants) as totalNumApplicants from 
+(SELECT *, case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
+                when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM InFunnelTotalConvertReportTable) f
+group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
+having experiencedFlag is not null
+) 
 
 -- IF EXISTS(SELECT * FROM  dbo.OutWeeklyConvertReportTable) DROP TABLE dbo.OutWeeklyConvertReportTable;
 -- SELECT * INTO dbo.OutWeeklyConvertReportTable FROM OutWeeklyConvertReportTable order by jobCapability, joblevel, joblocation, startYear, startWeek;
@@ -199,7 +212,6 @@ group by jobCapability, joblevel, joblocation, funnel, applicationAggStatus, app
 -- IF EXISTS(SELECT * FROM  dbo.InFunnelWeeklyConvertReportTable) DROP TABLE dbo.InFunnelWeeklyConvertReportTable;
 -- SELECT * INTO dbo.InFunnelWeeklyConvertReportTable FROM InFunnelWeeklyConvertReportTable order by jobCapability, joblevel, joblocation, startYear, startWeek;
 
--- SELECT * FROM OutTotalConvertReportTable
--- SELECT * FROM OutWeeklyConvertReportTable
--- SELECT * FROM InFunnelWeeklyConvertReportTable
--- SELECT * FROM InFunnelTotalConvertReportTable
+-- IF EXISTS(SELECT * FROM  dbo.ConversionRateReportTable) DROP TABLE dbo.ConversionRateReportTable;
+ SELECT * INTO dbo.ConversionRateReportTable FROM tbl1; 
+
