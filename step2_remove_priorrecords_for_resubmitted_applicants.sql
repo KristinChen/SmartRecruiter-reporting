@@ -1,17 +1,17 @@
--- example has reached out OUT before resubmitting
--- select candidateId, jobId, applicationId, eventId, eventDate, eventType, applicationStatus, applicationSubStatus, jobCapability, jobLevel, jobLocation from dbo.ValidEvents where candidateid = '0ab7b172-31ae-4197-ba3b-cf4f8678cca6' and jobid = 'ace13ce4-eb17-4094-8576-39c821029a90' order by eventDate;
+-- select distinct candidateid, jobid from ValidEvents where eventtype like '%application re-submitted%' ---526
 
--- example haven't reached out OUT before resubmitting
--- select candidateId, jobId, applicationId, eventId, eventDate, eventType, applicationStatus, applicationSubStatus, jobCapability, jobLevel, jobLocation from dbo.ValidEvents where candidateid = '38d0354c-cc93-4f65-b470-adc52b7bad12' and jobid = '30dde34e-99e8-4bcd-9c82-a3528db3f308' order by eventDate;
--- select candidateId, jobId, applicationId, eventId, eventDate, eventType, applicationStatus, applicationSubStatus, jobCapability, jobLevel, jobLocation from dbo.ValidEvents where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2' and jobid = 'ace13ce4-eb17-4094-8576-39c821029a90' order by eventDate;
--- select candidateId, jobId, applicationId, eventId, eventDate, eventType, applicationStatus, applicationSubStatus, jobCapability, jobLevel, jobLocation from dbo.ValidEvents where candidateid = '46b22810-8557-4e94-8156-d22cb1b60594' and jobid = '305e3700-8f54-4499-9d3e-2f0ddfbed930' order by eventDate;
- 
-with resubmitted_case as
+with ResubmittedCases as
 (
-select *, row_number() over (PARTITION BY candidateId, jobid order by eventDate) as step
+select *, max(sumStartFlag) over (partition by candidateId, jobId) as maxStartFlag from 
+(
+select *,
+    SUM(startFlag) OVER (PARTITION BY candidateId, jobId order by eventDate) as sumStartFlag, 
+    SUM(outFlag) OVER (PARTITION BY candidateId, jobId order by eventDate) sumOutFlag
 FROM
-(select *, case when funnel = 'JOIN' or funnel = 'REJOIN' then 1 else 0 end startFlag
-          from
+(select *, 
+        case when funnel = 'JOIN' or funnel = 'REJOIN' then 1 else 0 end startFlag,
+        case when funnel = 'OUT' then 1 else 0 end outFlag
+from
 (
 select 
 *,
@@ -20,21 +20,69 @@ case when eventType like '%Application Re-Submitted%' then 'REJOIN'
     when applicationStatus = 'HIRED' or applicationStatus = 'TRANSFERRED' or applicationStatus = 'WITHDRAWN' or applicationStatus = 'REJECTED' then 'OUT' 
 else NULL 
 end funnel from dbo.ValidEvents
-) a) b),
+) a
+) b
+) c
+),
 
--- remove prior records before resubmitting, ensuring every applicant has ONE and ONLY ONE starting point
-cleaned_cases as (
-select r.*, row_number() over (PARTITION BY r.candidateId, r.jobid order by r.eventDate) as cleanStep, maxStartFlag from resubmitted_case r
-inner JOIN
+-- good ones: end the funnel before rejoinning
+-- good resubmitted example: select * from ClosedResubmittedCases where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2'; 
+ClosedResubmittedCases as 
 (
-    select candidateid, jobid, max(step) as maxStartFlag from resubmitted_case where startFlag = 1 group by candidateId, jobId
-) max_vle
-on r.candidateId = max_vle.candidateId and r.jobId = max_vle.jobId
-and r.step >= maxStartFlag
-)
--- IF EXISTS(SELECT * FROM dbo.CleanedValidEvents) DROP TABLE dbo.CleanedValidEvents
-SELECT * INTO dbo.CleanedValidEvents FROM cleaned_cases;
+select v.*, sumStartFlag joinId from 
+(
+select distinct candidateId, jobId from ResubmittedCases where funnel like 'REJOIN' and sumOutFlag = sumStartFlag - 1
+) b
+left join 
+resubmittedCases v
+on v.candidateId = b.candidateId and v.jobId = b.jobid
+),
 
--- select count(distinct concat(candidateid, jobid)) from dbo.ValidEvents; --9684
--- select count(distinct concat(candidateid, jobid)) from dbo.CleanedValidEvents; --9684
--- select funnel, count(distinct concat(candidateid, jobid)) from dbo.CleanedValidEvents group by funnel; --join: 9158 + rejoin: 526 = 9684
+-- bad ones...remove ---------------------------
+-- bad resubmitted example: select * from ResubmittedCases where candidateid = '02d0da8f-5018-48a0-9fd7-41acd000afec'; 
+
+CleanedUnclosedResubmittedCases AS 
+(
+select v.*, sumStartFlag joinId from 
+(
+select distinct candidateId, jobId from ResubmittedCases where funnel like 'REJOIN' and sumOutFlag != sumStartFlag - 1
+) b
+inner join resubmittedCases v
+on v.candidateId = b.candidateId and v.jobId = b.jobid and v.sumStartFlag >= maxStartFlag
+),  
+
+-- other cases
+UnResumbittedCases AS (
+select v.*, sumStartFlag joinId from
+(
+select distinct a.candidateId, a.jobid from ResubmittedCases a  --un-resubmitted cases
+left join
+(select distinct candidateid, jobid from ResubmittedCases where eventtype like '%application re-submitted%') b
+on a.candidateId = b.candidateId and a.jobid = b.jobid
+where b.candidateId is NULL and b.jobid is NULL
+) c
+left join 
+resubmittedCases v
+on v.candidateId = c.candidateId and v.jobId = c.jobid
+),
+
+-- union ---------------------------------------
+cleanedTable AS 
+(
+select eventId, candidateId, jobId, joinId, jobLevel, jobCapability, jobLocation, eventDate, eventType, applicationStatus, applicationSubStatus from 
+(
+select * from ClosedResubmittedCases
+UNION
+select * from CleanedUnclosedResubmittedCases
+UNION
+select * from UnResumbittedCases 
+) tot 
+)
+--distinct concat(candidateid, jobid): 9955; concat(candidateid, jobid, joinId): 10534
+-- select * from ClosedResubmittedCases; 
+--select * from CleanedUnclosedResubmittedCases; 
+-- select * from UnResumbittedCases where joinId != 1; 
+-- select * from UnResumbittedCases where candidateid = '001baac4-baec-40ca-aac6-c9c8cecd477c' --needed to be further clean; 
+
+-- IF EXISTS(SELECT * FROM dbo.CleanedValidEvents) DROP TABLE dbo.CleanedValidEvents
+SELECT * INTO dbo.CleanedValidEvents FROM cleanedTable;
