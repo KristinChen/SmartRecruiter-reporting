@@ -1,8 +1,26 @@
 -- each applicant is identified by `candidateId` and `jobId`
 -- each applicant join/rejoin once; and exit once
 
+-- Clean job capability
+with CleanedJobCapabilityTable as 
+(
+select distinct tot.eventId, tot.candidateId, tot.jobId, tot.jobLevel, c.cleanedJobCapability jobCapability, tot.jobLocation, tot.eventDate, tot.eventType, tot.applicationStatus, tot.applicationSubStatus from
+(
+select b.candidateId, b.jobId, b.jobCapability cleanedJobCapability from
+(select distinct candidateId, jobId, jobCapability from ApplicationEvents_Merged where jobCapability is NULL) a
+right join 
+(select distinct candidateId, jobId, jobCapability from ApplicationEvents_Merged where jobCapability is NOT NULL) b
+on a.candidateId = b.candidateId and a.jobid = b.jobid
+) c
+right join
+ApplicationEvents_Merged tot
+on
+tot.candidateId = c.candidateId and tot.jobid = c.jobid 
+),
+
+
 -- Remove invalid events 
-with CleanedStatusTable as 
+CleanedStatusTable as 
 (
 select distinct eventId, candidateId, jobId, jobLevel, jobCapability, jobLocation, eventDate, cleanedEventType, cleanedApplicationStatus, applicationSubStatus from 
 (
@@ -17,7 +35,7 @@ select distinct eventId, candidateId, jobId, jobLevel, jobCapability, jobLocatio
         when applicationStatus like '%transferred%' then 'Application Status Updated'
         when applicationStatus like '%withdrawn%' then 'Application Status Updated'
     else eventType end cleanedEventType
-    from ApplicationEvents_Merged
+    from CleanedJobCapabilityTable
 ) a 
 ),
 validCases as (
