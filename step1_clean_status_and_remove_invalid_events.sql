@@ -18,8 +18,9 @@ on
 tot.candidateId = c.candidateId and tot.jobid = c.jobid 
 ),
 
-
 -- Remove invalid events 
+-- good example: select * from CleanedJobCapabilityTable where candidateid = '001baac4-baec-40ca-aac6-c9c8cecd477c' order by eventDate; 
+
 CleanedStatusTable as 
 (
 select distinct eventId, candidateId, jobId, jobLevel, jobCapability, jobLocation, eventDate, cleanedEventType, cleanedApplicationStatus, applicationSubStatus from 
@@ -54,6 +55,10 @@ validCases as (
     )  b
     where invalidFlag = 0
 )
+
+-- Remove dupuplicate status records caused by different eventDate and eventType; 
+-- good example: select * from validCases where candidateid = '001baac4-baec-40ca-aac6-c9c8cecd477c' order by eventDate; 
+-- select * from validCases where candidateid = '001baac4-baec-40ca-aac6-c9c8cecd477c' order by eventDate; 
 
 -- IF EXISTS(SELECT * FROM dbo.ValidEvents) DROP TABLE dbo.ValidEvents
 SELECT * INTO dbo.ValidEvents FROM validCases;
