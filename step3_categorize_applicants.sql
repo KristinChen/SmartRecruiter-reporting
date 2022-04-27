@@ -102,8 +102,8 @@ where a4.inFlag = 0)
 -- SELECT * INTO dbo.JoinApplicants FROM JoinData where jobCapability = 'Business Intelligence' or jobCapability = 'Data Science' or jobCapability = 'Data Engineering'
 -- order by jobCapability, jobLevel, jobLocation, year, week
 
--- IF EXISTS(SELECT * FROM  dbo.INFunnelApplicants) DROP TABLE dbo.INFunnelApplicants;
--- SELECT * INTO dbo.INFunnelApplicants FROM inFunnelData where jobCapability = 'Business Intelligence' or jobCapability = 'Data Science' or jobCapability = 'Data Engineering'
+-- IF EXISTS(SELECT * FROM  dbo.InFunnelApplicants) DROP TABLE dbo.InFunnelApplicants;
+-- SELECT * INTO dbo.InFunnelApplicants FROM inFunnelData where jobCapability = 'Business Intelligence' or jobCapability = 'Data Science' or jobCapability = 'Data Engineering'
 -- order by jobCapability, jobLevel, jobLocation, year, week
 
 -- IF EXISTS(SELECT * FROM  dbo.ActiveInFunnelApplicants) DROP TABLE dbo.ActiveInFunnelApplicants;
@@ -120,14 +120,14 @@ where a4.inFlag = 0)
 
 -- example 1: join (161) = (out) 106 + (infunnel) 55; (infunnel) 55 = (active) 46 + (inactive) 9
 -- select * from JoinApplicants where jobCapability like '%bus%' AND joblevel like '%all%' and jobLocation like '%md' and week = '14';
--- select * from INFunnelApplicants where jobCapability like '%bus%' AND joblevel like '%all%' and jobLocation like '%md' and week = '14'
+-- select * from InFunnelApplicants where jobCapability like '%bus%' AND joblevel like '%all%' and jobLocation like '%md' and week = '14'
 -- select * from outApplicants where jobCapability like '%bus%' AND joblevel like '%all%' and jobLocation like '%md' and week = '14'
 -- select * from ActiveInFunnelApplicants where jobCapability like '%bus%' AND joblevel like '%all%' and jobLocation like '%md' and week = '14'
 -- select * from InactiveInFunnelApplicants where jobCapability like '%bus%' AND joblevel like '%all%' and jobLocation like '%md' and week = '14'
 
 -- example 2: join (14) = (out) 8 + (infunnel) 6; (infunnel) 6 = (active) 0 + (inactive) 6
 -- select * from JoinApplicants where jobCapability like '%science%' AND joblevel like '%all%' and jobLocation like '%md' and week = '12';
--- select * from INFunnelApplicants where jobCapability like '%science%' AND joblevel like '%all%' and jobLocation like '%md' and week = '12';
+-- select * from InFunnelApplicants where jobCapability like '%science%' AND joblevel like '%all%' and jobLocation like '%md' and week = '12';
 -- select * from outApplicants where jobCapability like '%science%' AND joblevel like '%all%' and jobLocation like '%md' and week = '12';
 -- select * from ActiveInFunnelApplicants where jobCapability like '%science%' AND joblevel like '%all%' and jobLocation like '%md' and week = '12';
 -- select * from InactiveInFunnelApplicants where jobCapability like '%science%' AND joblevel like '%all%' and jobLocation like '%md' and week = '12';
