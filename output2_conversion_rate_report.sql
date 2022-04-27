@@ -195,24 +195,12 @@ select experiencedFlag, 0 OutFlag, jobCapability, jobLocation, funnel,applicatio
                 when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM InFunnelTotalConvertReportTable) f
 group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
 having experiencedFlag is not null
-), 
+)
 
-tbl2 AS (
-select experiencedFlag, 1 OutFlag, jobCapability, jobLocation, funnel,applicationAggStatus, applicationAggSubStatus, sum(numApplicants) as totalNumApplicants from 
-(SELECT *, case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
-                when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM InFunnelTotalConvertReportTable) f
-group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
-having experiencedFlag is not null
-union
-select experiencedFlag, 0 OutFlag, jobCapability, jobLocation, funnel,applicationAggStatus, applicationAggSubStatus, sum(numApplicants) as totalNumApplicants from 
-(SELECT *, case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
-                when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM InFunnelTotalConvertReportTable) f
-group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
-having experiencedFlag is not null
-) 
-
--- IF EXISTS(SELECT * FROM  dbo.InFunnelConversionRateTable) DROP TABLE dbo.InFunnelConversionRateTable;
--- SELECT * INTO dbo.InFunnelConversionRateTable FROM tbl2; 
+-- IF EXISTS(SELECT * FROM  dbo.ConversionRateTable) DROP TABLE dbo.ConversionRateTable;
+SELECT * INTO dbo.ConversionRateTable FROM tbl1; 
 
 -- IF EXISTS(SELECT * FROM  dbo.OutConversionRateTable) DROP TABLE dbo.OutConversionRateTable;
 -- SELECT * INTO dbo.OutConversionRateTable FROM tbl1; 
+
+select * from dbo.ConversionRateTable; 
