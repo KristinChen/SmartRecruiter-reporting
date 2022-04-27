@@ -29,26 +29,28 @@ end funnel from dbo.ValidEvents
 -- good resubmitted example: select * from ClosedResubmittedCases where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2'; 
 ClosedResubmittedCases as 
 (
-select v.*, sumStartFlag joinId from 
+select v.*, v.sumStartFlag joinId from 
 (
-select distinct candidateId, jobId from ResubmittedCases where funnel like 'REJOIN' and sumOutFlag = sumStartFlag - 1
+select distinct candidateId, jobId, sumStartFlag from ResubmittedCases where funnel like 'REJOIN' and sumOutFlag = sumStartFlag - 1
 ) b
 left join 
 resubmittedCases v
-on v.candidateId = b.candidateId and v.jobId = b.jobid
+on v.candidateId = b.candidateId and v.jobId = b.jobid and v.sumStartFlag < b.sumStartFlag
 ),
+
+-- select * from ClosedResubmittedCases where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2'; 
 
 -- bad ones...remove ---------------------------
 -- bad resubmitted example: select * from ResubmittedCases where candidateid = '02d0da8f-5018-48a0-9fd7-41acd000afec'; 
 
 CleanedUnclosedResubmittedCases AS 
 (
-select v.*, sumStartFlag joinId from 
+select v.*, v.sumStartFlag joinId from 
 (
-select distinct candidateId, jobId from ResubmittedCases where funnel like 'REJOIN' and sumOutFlag != sumStartFlag - 1
+select distinct candidateId, jobId, sumStartFlag from ResubmittedCases where funnel like 'REJOIN' and sumOutFlag != sumStartFlag - 1
 ) b
 inner join resubmittedCases v
-on v.candidateId = b.candidateId and v.jobId = b.jobid and v.sumStartFlag >= maxStartFlag
+on v.candidateId = b.candidateId and v.jobId = b.jobid and v.sumStartFlag >= b.sumStartFlag
 ),  
 
 -- other cases
@@ -69,7 +71,9 @@ on v.candidateId = c.candidateId and v.jobId = c.jobid
 -- union ---------------------------------------
 cleanedTable AS 
 (
-select eventId, candidateId, jobId, joinId, jobLevel, jobCapability, jobLocation, eventDate, eventType, applicationStatus, applicationSubStatus from 
+select eventId, candidateId, jobId, joinId, jobLevel, jobCapability, jobLocation, eventDate, eventType, applicationStatus, applicationSubStatus
+, funnel,startFlag, outFlag, sumStartFlag, sumOutFlag, maxStartFlag 
+from 
 (
 select * from ClosedResubmittedCases
 UNION
