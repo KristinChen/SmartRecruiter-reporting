@@ -1,17 +1,10 @@
--- SELECT * FROM dbo.AggReportTable1 where jobCapability like '%eng%' AND joblevel like '%all%' and jobLocation like '%co' and week = '14';
--- select * from JoinApplicants where jobCapability like '%eng%' AND joblevel like '%all%' and jobLocation like '%co' and week = '14';
--- select * from INFunnelApplicants where jobCapability like '%eng%' AND joblevel like '%all%' and jobLocation like '%co' and week = '14'
--- select * from ActiveInFunnelApplicants where jobCapability like '%eng%' AND joblevel like '%all%' and jobLocation like '%co' and week = '14'
--- select * from InactiveInFunnelApplicants where jobCapability like '%eng%' AND joblevel like '%all%' and jobLocation like '%co' and week = '14'
--- select * from outApplicants where jobCapability like '%eng%' AND joblevel like '%all%' and jobLocation like '%co' and week = '14'
-
 WITH AnalysisTable1 AS
 (select *, 
       YEAR(eventDate) AS year, 
       MONTH(eventDate) AS month, 
       DATEPART(WEEK, eventDate) as week,
       DATEPART(WEEKDAY, eventDate) as weekday,
-      concat(candidateId, '&', jobId) as uniqueId
+      concat(candidateId, '&', jobId, '&', joinId) as uniqueId
 from CleanedValidEvents),
 
 OutWeeklyConvertReportTable AS (
@@ -48,6 +41,7 @@ left JOIN
 AnalysisTable1 e
 ON a2.candidateId = e.candidateId 
 and a2.jobId = e.jobId 
+and a2.joinid = e.joinid 
 and a2.uniqueId = e.uniqueId 
 and a2.jobCapability = e.jobCapability 
 and a2.jobLevel = e.jobLevel 
@@ -90,6 +84,7 @@ left JOIN
 AnalysisTable1 e
 ON a2.candidateId = e.candidateId 
 and a2.jobId = e.jobId 
+and a2.joinid = e.joinid 
 and a2.uniqueId = e.uniqueId 
 and a2.jobCapability = e.jobCapability 
 and a2.jobLevel = e.jobLevel 
@@ -135,6 +130,7 @@ left JOIN
 AnalysisTable1 e
 ON a2.candidateId = e.candidateId 
 and a2.jobId = e.jobId 
+and a2.joinid = e.joinid 
 and a2.uniqueId = e.uniqueId 
 and a2.jobCapability = e.jobCapability 
 and a2.jobLevel = e.jobLevel 
@@ -179,6 +175,7 @@ left JOIN
 AnalysisTable1 e
 ON a2.candidateId = e.candidateId 
 and a2.jobId = e.jobId 
+and a2.joinid = e.joinid 
 and a2.uniqueId = e.uniqueId 
 and a2.jobCapability = e.jobCapability 
 and a2.jobLevel = e.jobLevel 
@@ -198,20 +195,24 @@ select experiencedFlag, 0 OutFlag, jobCapability, jobLocation, funnel,applicatio
                 when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM InFunnelTotalConvertReportTable) f
 group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
 having experiencedFlag is not null
+), 
+
+tbl2 AS (
+select experiencedFlag, 1 OutFlag, jobCapability, jobLocation, funnel,applicationAggStatus, applicationAggSubStatus, sum(numApplicants) as totalNumApplicants from 
+(SELECT *, case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
+                when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM InFunnelTotalConvertReportTable) f
+group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
+having experiencedFlag is not null
+union
+select experiencedFlag, 0 OutFlag, jobCapability, jobLocation, funnel,applicationAggStatus, applicationAggSubStatus, sum(numApplicants) as totalNumApplicants from 
+(SELECT *, case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
+                when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag FROM InFunnelTotalConvertReportTable) f
+group by experiencedFlag, jobCapability, jobLocation, jobCapability, funnel,applicationAggStatus, applicationAggSubStatus
+having experiencedFlag is not null
 ) 
 
--- IF EXISTS(SELECT * FROM  dbo.OutWeeklyConvertReportTable) DROP TABLE dbo.OutWeeklyConvertReportTable;
--- SELECT * INTO dbo.OutWeeklyConvertReportTable FROM OutWeeklyConvertReportTable order by jobCapability, joblevel, joblocation, startYear, startWeek;
+-- IF EXISTS(SELECT * FROM  dbo.InFunnelConversionRateTable) DROP TABLE dbo.InFunnelConversionRateTable;
+-- SELECT * INTO dbo.InFunnelConversionRateTable FROM tbl2; 
 
--- IF EXISTS(SELECT * FROM  dbo.OutTotalConvertReportTable) DROP TABLE dbo.OutTotalConvertReportTable;
--- SELECT * INTO dbo.OutTotalConvertReportTable FROM OutTotalConvertReportTable order by jobCapability, joblevel, joblocation;
-
--- IF EXISTS(SELECT * FROM  dbo.InFunnelTotalConvertReportTable) DROP TABLE dbo.InFunnelTotalConvertReportTable;
--- SELECT * INTO dbo.InFunnelTotalConvertReportTable FROM InFunnelTotalConvertReportTable order by jobCapability, joblevel, joblocation;
-
--- IF EXISTS(SELECT * FROM  dbo.InFunnelWeeklyConvertReportTable) DROP TABLE dbo.InFunnelWeeklyConvertReportTable;
--- SELECT * INTO dbo.InFunnelWeeklyConvertReportTable FROM InFunnelWeeklyConvertReportTable order by jobCapability, joblevel, joblocation, startYear, startWeek;
-
--- IF EXISTS(SELECT * FROM  dbo.ConversionRateReportTable) DROP TABLE dbo.ConversionRateReportTable;
- SELECT * INTO dbo.ConversionRateReportTable FROM tbl1; 
-
+-- IF EXISTS(SELECT * FROM  dbo.OutConversionRateTable) DROP TABLE dbo.OutConversionRateTable;
+-- SELECT * INTO dbo.OutConversionRateTable FROM tbl1; 
