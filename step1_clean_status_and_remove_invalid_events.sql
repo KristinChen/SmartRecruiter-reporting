@@ -2,6 +2,7 @@
 -- each applicant join/rejoin once; and exit once
 
 -- Clean job capability
+-- select distinct candidateId, jobId, jobCapability from ApplicationEvents_Merged where jobCapability is NULL
 with CleanedJobCapabilityTable as 
 (
 select distinct tot.eventId, tot.candidateId, tot.jobId, tot.jobLevel, c.cleanedJobCapability jobCapability, tot.jobLocation, tot.eventDate, tot.eventType, tot.applicationStatus, tot.applicationSubStatus from
@@ -16,7 +17,9 @@ right join
 ApplicationEvents_Merged tot
 on
 tot.candidateId = c.candidateId and tot.jobid = c.jobid 
-),
+), 
+-- select * from CleanedJobCapabilityTable where candidateid = '001baac4-baec-40ca-aac6-c9c8cecd477c' order by eventDate
+
 
 -- Remove invalid events 
 -- good example: select * from CleanedJobCapabilityTable where candidateid = '001baac4-baec-40ca-aac6-c9c8cecd477c' order by eventDate; 
