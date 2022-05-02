@@ -15,14 +15,14 @@ from CleanedValidEvents where jobCapability = 'Business Intelligence' or jobCapa
 
 -- select count(distinct uniqueId) from AnalysisTable1 --7215
 
-outData AS 
+ActiveOutData AS 
 (
 select b.*, a.year outYear, a.week outWeek from
 (select uniqueId, year, week from AnalysisTable1 where step = maxStep and funnel like '%out%') a
 left join AnalysisTable1 b
 on a.uniqueId = b.uniqueId
 ),
--- select count(distinct uniqueId) from outData; --4,399
+-- select count(distinct uniqueId) from ActiveOutData; --4,399; EXCLUDE THOSE GOT REJECTED RIGHT THE WAY
 
 InFunnelData AS (
 select b.* from
@@ -43,11 +43,11 @@ on a.uniqueId = b.uniqueId)
 -- IF EXISTS(SELECT * FROM  dbo.InFunnelData) DROP TABLE dbo.InFunnelData;
 -- SELECT * INTO dbo.InFunnelData FROM InFunnelData; 
 
--- IF EXISTS(SELECT * FROM  dbo.ActiveInFunnelApplicants) DROP TABLE dbo.ActiveInFunnelApplicants;
+-- IF EXISTS(SELECT * FROM  dbo.ActiveInFunnelData) DROP TABLE dbo.ActiveInFunnelData;
 -- SELECT * INTO dbo.ActiveInFunnelData FROM ActiveInFunnelData 
 
--- IF EXISTS(SELECT * FROM  dbo.outData) DROP TABLE dbo.outData;
--- SELECT * INTO dbo.outData FROM outData 
+-- IF EXISTS(SELECT * FROM  dbo.OutData) DROP TABLE dbo.OutData;
+-- SELECT * INTO dbo.ActiveOutData FROM ActiveOutData 
 
 
 -- example 1: join (161) = (out) 106 + (infunnel) 55; (infunnel) 55 = (active) 46 + (inactive) 9

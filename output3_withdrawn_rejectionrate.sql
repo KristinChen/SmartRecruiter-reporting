@@ -1,5 +1,6 @@
--- 169
+-- 176
 -- select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%WITHDRAWN%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
+-- select count(distinct concat(candidateId, jobId, joinId)) from outData where applicationStatus like '%WITHDRAWN%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
 
 With WithdrawnApplicants AS 
 (
@@ -48,8 +49,12 @@ group by d.jobCapability, d.funnel, d.applicationAggStatus, d.applicationAggSubS
 -- SELECT * INTO dbo.WithdrawnRateTable FROM WithdrawnRateTable;
 
 ----------------------------------------REJECTION----------------------------------------------
--- 3954
+-- 4052
 -- select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%REJECTED%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
+-- 3684
+-- select count(distinct concat(candidateId, jobId, joinId)) from outData where applicationStatus like '%REJECTED%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
+-- 368 --reject right the way
+-- select count(distinct concat(candidateId, jobId, joinId)) from InFunnelData where applicationStatus like '%REJECTED%'
 
 With rejectedApplicants AS (
 select *,
