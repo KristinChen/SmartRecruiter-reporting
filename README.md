@@ -1,7 +1,7 @@
 # SmartRecruiter-reporting
 
 ## 1. Data Understanding
-### Total: 7342 applicants: 4897  + 503  + 1942 
+### Total: 7342 applicants: 4897  + 503  + 1942  (include intern and remote applicants)
 ```console 
 select count(distinct concat(joinId, candidateId, jobId)) from CleanedValidEvents where (jobCapability = 'Business Intelligence' or jobCapability = 'Data Science' or jobCapability = 'Data Engineering') --total: 7342
 ```
@@ -34,9 +34,13 @@ select * OutConversionRateTable
 
 ```console
 select * ActiveInFunnelConversionRateTable
+
+select sum(numApplicants) from ActiveInFunnelConversionRateTable WHERE FUNNEL like '%join%' or funnel like '%rejoin%' -- 503
+select sum(numApplicants) from ActiveInFunnelConversionRateTable WHERE (FUNNEL like '%join%' or funnel like '%rejoin%') and experiencedFlag is not null and jobLocation not like '%remote%' --483
+
 ```
 
-### `WithdrawnRateTable`: from which funnel the applicant withdrew
+### `WithdrawnRateTable`: from which funnel the applicant withdrew (include intern and remote applicants)
 ```console
 select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%WITHDRAWN%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%'); --176
 
@@ -45,7 +49,7 @@ select count(distinct concat(candidateId, jobId, joinId)) from outData where app
 select sum(numApplicants) from WithdrawnRateTable; --176 
 ```
 
-### `RejectionRateTable`: from which funnel the applicant got rejected
+### `RejectionRateTable`: from which funnel the applicant got rejected (include intern and remote applicants)
 ```console
 select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%REJECTED%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%'); --4052
 
@@ -53,7 +57,7 @@ select count(distinct uniqueid) from outdata where applicationStatus like '%REJE
 select sum(numApplicants) from RejectionRateTable --4052
 ```
 
-### `ActiveInFunnelLastStatusTable`: active applicants currently at which funnel
+### `ActiveInFunnelLastStatusTable`: active applicants currently at which funnel (include intern and remote applicants)
 ```
 select count(distinct uniqueId) from ActiveInFunnelData; --503
 select sum(numApplicants) from ActiveInFunnelLastStatusTable; --503
