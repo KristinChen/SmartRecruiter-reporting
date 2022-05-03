@@ -13,6 +13,9 @@ select count(distinct uniqueId) from OutData
 ### In funnel actively making progress: 503 Applicants
 ```console
 select count(distinct uniqueId) from InFunnelData where funnel is NULL --503 actively in funnel
+
+select count(distinct uniqueId) from InFunnelData where funnel is NULL and jobLevel not like '%intern%' and joblocation not like  '%remote%' -- 483
+
 ```
 
 ### In funnel inactively: 1942 Applicants
