@@ -15,28 +15,24 @@ from CleanedValidEvents where jobCapability = 'Business Intelligence' or jobCapa
 
 -- select count(distinct uniqueId) from AnalysisTable1 --7215
 
-ActiveOutData AS 
+outData AS 
 (
 select b.*, a.year outYear, a.week outWeek from
-(select uniqueId, year, week from AnalysisTable1 where step = maxStep and funnel like '%out%') a
+(select uniqueId, year, week from AnalysisTable1 where funnel like '%out%' or (applicationStatus like '%hired%' or applicationStatus like '%transferred%' or applicationStatus like '%rejected%' or applicationStatus like '%withdrawn%')) a
 left join AnalysisTable1 b
 on a.uniqueId = b.uniqueId
 ),
--- select count(distinct uniqueId) from ActiveOutData; --4,399; EXCLUDE THOSE GOT REJECTED RIGHT THE WAY
+
 
 InFunnelData AS (
 select b.* from
-(select distinct uniqueId from AnalysisTable1 where uniqueId not in (select uniqueId from AnalysisTable1 where step = maxStep and funnel like '%out%')) a
+(select distinct uniqueId from AnalysisTable1 where uniqueId not in (select uniqueId from outData)) a
 left join AnalysisTable1 b
-on a.uniqueId = b.uniqueId), --2816
+on a.uniqueId = b.uniqueId), 
 
--- select count(distinct uniqueId) from InFunnelData where funnel is NULL; --518 actively in funnel
--- select count(distinct uniqueId) from InFunnelData where step = maxStep and (funnel not like '%join%' or funnel not like '%rejoin%'); --2207
-
--- select distinct funnel, count(distinct uniqueId) from InFunnelData where step = maxStep group by funnel; 
 ActiveInFunnelData AS (
 select b.* from
-(select distinct uniqueId  from InFunnelData where step = maxStep and funnel is null) a
+(select uniqueId from InFunnelData where funnel is NULL) a
 left join AnalysisTable1 b
 on a.uniqueId = b.uniqueId)
 
@@ -46,8 +42,8 @@ on a.uniqueId = b.uniqueId)
 -- IF EXISTS(SELECT * FROM  dbo.ActiveInFunnelData) DROP TABLE dbo.ActiveInFunnelData;
 -- SELECT * INTO dbo.ActiveInFunnelData FROM ActiveInFunnelData 
 
--- IF EXISTS(SELECT * FROM  dbo.OutData) DROP TABLE dbo.OutData;
--- SELECT * INTO dbo.ActiveOutData FROM ActiveOutData 
+-- IF EXISTS(SELECT * FROM  dbo.outData) DROP TABLE dbo.outData;
+-- SELECT * INTO dbo.outData FROM outData 
 
 
 -- example 1: join (161) = (out) 106 + (infunnel) 55; (infunnel) 55 = (active) 46 + (inactive) 9
