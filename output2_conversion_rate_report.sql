@@ -37,7 +37,7 @@ select e.*,
        from OutData e
 ) a
 group by jobCapability, experiencedFlag, joblocation, funnel, applicationAggStatus, applicationAggSubStatus
-having experiencedFlag is not null and jobLocation not like '%remote%'
+-- having experiencedFlag is not null and jobLocation not like '%remote%'
 ),
 
 ActiveInFunnelConversionRateTable AS (
@@ -76,10 +76,10 @@ select e.*,
 
        case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
        when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag
-       from InFunnelData e
+       from ActiveInFunnelData e
 ) a
 group by jobCapability, experiencedFlag, joblocation, funnel, applicationAggStatus, applicationAggSubStatus
-having experiencedFlag is not null and jobLocation not like '%remote%'
+-- having experiencedFlag is not null and jobLocation not like '%remote%'
 )
 
 -- IF EXISTS(SELECT * FROM  dbo.OutConversionRateTable) DROP TABLE dbo.OutConvertReportTable;
