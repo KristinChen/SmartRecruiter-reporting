@@ -28,6 +28,8 @@ select count(distinct uniqueId) from InFunnelData where uniqueId not in (select 
 
 ```console
 select * OutConversionRateTable
+
+select sum(numapplicants) from OutConversionRateTable where applicationAggStatus like '%rejected%' --4008 != 4052 (BUG)
 ```
 
 ### `ActiveInFunnelConversionRateTable`: conversion rate for actively in funnel applicants
