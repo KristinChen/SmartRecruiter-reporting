@@ -52,8 +52,8 @@ select sum(numApplicants) from RejectionRateTable --4052
 
 ### `ActiveInFunnelLastStatusTable`: active applicants currently at which funnel
 ```
--- select count(distinct uniqueId) from ActiveInFunnelData; --503
--- select sum(numApplicants) from ActiveInFunnelLastStatusTable; --503
+select count(distinct uniqueId) from ActiveInFunnelData; --503
+select sum(numApplicants) from ActiveInFunnelLastStatusTable; --503
 ```
 
 
