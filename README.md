@@ -13,9 +13,6 @@ select count(distinct uniqueId) from OutData
 ### In funnel actively making progress: 503 Applicants
 ```console
 select count(distinct uniqueId) from InFunnelData where funnel is NULL --503 actively in funnel
-
-select count(distinct uniqueId) from InFunnelData where funnel is NULL and jobLevel not like '%intern%' and joblocation not like  '%remote%' -- 483
-
 ```
 
 ### In funnel inactively: 1942 Applicants
@@ -28,7 +25,6 @@ select count(distinct uniqueId) from InFunnelData where uniqueId not in (select 
 
 ```console
 select * OutConversionRateTable
-
 select sum(numapplicants) from OutConversionRateTable where applicationAggStatus like '%rejected%' --4052 
 ```
 
@@ -36,10 +32,7 @@ select sum(numapplicants) from OutConversionRateTable where applicationAggStatus
 
 ```console
 select * ActiveInFunnelConversionRateTable
-
 select sum(numApplicants) from ActiveInFunnelConversionRateTable WHERE FUNNEL like '%join%' or funnel like '%rejoin%' -- 503
-select sum(numApplicants) from ActiveInFunnelConversionRateTable WHERE (FUNNEL like '%join%' or funnel like '%rejoin%') and experiencedFlag is not null and jobLocation not like '%remote%' --483
-
 ```
 
 ### `WithdrawnRateTable`: from which funnel the applicant withdrew (include intern and remote applicants)
@@ -51,7 +44,7 @@ select count(distinct concat(candidateId, jobId, joinId)) from outData where app
 select sum(numApplicants) from WithdrawnRateTable; --176 
 ```
 
-### `RejectionRateTable`: from which funnel the applicant got rejected (include intern and remote applicants)
+### `RejectionRateTable`: from which funnel the applicant got rejected 
 ```console
 select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%REJECTED%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%'); --4052
 
