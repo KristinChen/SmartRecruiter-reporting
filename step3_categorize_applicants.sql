@@ -1,4 +1,7 @@
-WITH AnalysisTable1 AS
+WITH RemovedDuplicatedEventsTable AS
+(SELECT * FROM (SELECT *, row_number() over (partition by eventId order by eventDate) as eventIdCount FROM CleanedValidEvents) a where eventIdCount = 1),
+
+AnalysisTable1 AS
 (
 SELECT *, MAX(a.step) over (partition by a.candidateId, a.jobId, a.joinId) maxStep, MIN(a.step) over (partition by a.candidateId, a.jobId, a.joinId) minStep FROM 
 (
@@ -9,32 +12,45 @@ select *,
       DATEPART(WEEK, eventDate) as week,
       DATEPART(WEEKDAY, eventDate) as weekday,
       concat(candidateId, '&', jobId, '&', joinId) as uniqueId
-from CleanedValidEvents where jobCapability = 'Business Intelligence' or jobCapability = 'Data Science' or jobCapability = 'Data Engineering'
+from RemovedDuplicatedEventsTable where jobCapability = 'Business Intelligence' or jobCapability = 'Data Science' or jobCapability = 'Data Engineering'
 ) a
 ),
-
 -- select count(distinct uniqueId) from AnalysisTable1 --7215
+-- select count(distinct EVENTID) from AnalysisTable1 --16723
+-- select count(*) from AnalysisTable1 --16723
 
-outData AS 
+--4897
+-- select count(distinct uniqueId) from AnalysisTable1 where funnel like '%out%' or (applicationStatus like '%hired%' or applicationStatus like '%transferred%' or applicationStatus like '%rejected%' or applicationStatus like '%withdrawn%')
+
+OutData AS 
 (
-select b.*, a.year outYear, a.week outWeek from
-(select uniqueId, year, week from AnalysisTable1 where funnel like '%out%' or (applicationStatus like '%hired%' or applicationStatus like '%transferred%' or applicationStatus like '%rejected%' or applicationStatus like '%withdrawn%')) a
+select distinct b.* from
+(select uniqueId from AnalysisTable1 where funnel like '%out%' or (applicationStatus like '%hired%' or applicationStatus like '%transferred%' or applicationStatus like '%rejected%' or applicationStatus like '%withdrawn%')) a
 left join AnalysisTable1 b
 on a.uniqueId = b.uniqueId
 ),
 
+-- select count(distinct uniqueId) from UncleanedOutData; -- 4897
+-- select count(distinct EVENTID) from UncleanedOutData --13253
+-- select count(*) from UncleanedOutData --13253
 
 InFunnelData AS (
-select b.* from
-(select distinct uniqueId from AnalysisTable1 where uniqueId not in (select uniqueId from outData)) a
+select distinct b.* from
+(select distinct uniqueId from AnalysisTable1 where uniqueId not in (select uniqueId from OutData)) a
 left join AnalysisTable1 b
-on a.uniqueId = b.uniqueId), 
+on a.uniqueId = b.uniqueId),
+
+-- select count(eventid) from InFunnelData; --3470
+-- select count(*) from InFunnelData --3470
 
 ActiveInFunnelData AS (
-select b.* from
+select distinct b.* from
 (select uniqueId from InFunnelData where funnel is NULL) a
 left join AnalysisTable1 b
 on a.uniqueId = b.uniqueId)
+
+-- select count(eventid) from ActiveInFunnelData; --1528
+-- select count(*) from ActiveInFunnelData --1528
 
 -- IF EXISTS(SELECT * FROM  dbo.InFunnelData) DROP TABLE dbo.InFunnelData;
 -- SELECT * INTO dbo.InFunnelData FROM InFunnelData; 
