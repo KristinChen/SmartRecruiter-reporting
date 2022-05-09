@@ -5,7 +5,7 @@ This repo contains queries to clean recruiting data and produce reports.
 
 The preprocess process includes:
 - clean status and remove invalid events that are not for analyses. 
-![The valid funnel is shown here](C:\Users\JiatingChen\Documents\smartrecruiter\SmartRecruiter-reporting\valid_funnel_viz.png)
+![The valid funnel is shown here](Images/valid_funnel_viz.png)
 
 
 
