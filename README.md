@@ -1,5 +1,24 @@
 # SmartRecruiter-reporting
 
+
+This repo contains queries to clean recruiting data and produce reports. 
+
+The preprocess process includes:
+- clean status and remove invalid events that are not for analyses. 
+![The valid funnel is shown here](C:\Users\JiatingChen\Documents\smartrecruiter\SmartRecruiter-reporting\valid_funnel_viz.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## 1. Data Understanding
 ### Total: 7342 applicants: 4897  + 503  + 1942  (include intern and remote applicants)
 ```console 
