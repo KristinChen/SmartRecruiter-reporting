@@ -1,6 +1,5 @@
-
 ----------------------------------------REJECTION----------------------------------------------
--- 4052
+-- 4172
 -- select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%REJECTED%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
 -- select count(distinct uniqueid) from outdata where applicationStatus like '%REJECTED%'
 
@@ -16,16 +15,22 @@ RejectedAtStepOneApplicants AS (
     select candidateid, jobid, joinid, min(step) as minRejectionFlag from rejectedApplicants where rejectionFlag = 1 group by candidateId, jobId, joinid
 ) b
 where minRejectionFlag = 1
-), 
+),
+
+-- select * from RejectedAtStepOneApplicants --56 (correct)
+
 RejectedAtStepMoreThanOneApplicants AS (
     select b.* from
 (
     select candidateid, jobid, joinid, min(step) as minRejectionFlag from rejectedApplicants where rejectionFlag = 1 group by candidateId, jobId, joinid
 ) b
 where minRejectionFlag > 1
-), 
+),
+
+-- select * from RejectedAtStepMoreThanOneApplicants --4116 (correct)
+
 RejectionRateTable1 AS (
-select d.jobCapability, d.funnel, d.applicationAggStatus, d.applicationAggSubStatus, count(distinct concat(candidateId, jobId, joinId)) as numApplicants from
+select d.jobCapability, 'REJECTED RIGHT THE WAY' applicationAggStatus, d.applicationAggSubStatus, count(distinct concat(candidateId, jobId, joinId)) as numApplicants from
 (
 select  distinct c.*, 
     bb.minRejectionFlag,
@@ -55,11 +60,11 @@ RejectedAtStepOneApplicants bb
 left join rejectedApplicants c
 on c.candidateId = bb.candidateId and c.jobId = bb.jobId and c.joinId = bb.joinId and c.step = bb.minRejectionFlag
 ) d
-group by d.jobCapability, d.funnel, d.applicationAggStatus, d.applicationAggSubStatus  
+group by d.jobCapability, d.applicationAggStatus, d.applicationAggSubStatus  
 ),
 
 RejectionRateTable2 AS (
-select d.jobCapability, d.funnel, d.applicationAggStatus, d.applicationAggSubStatus, count(distinct concat(candidateId, jobId, joinId)) as numApplicants from
+select d.jobCapability, d.applicationAggStatus, d.applicationAggSubStatus, count(distinct concat(candidateId, jobId, joinId)) as numApplicants from
 (
 select  distinct c.*, 
     bb.minRejectionFlag,
@@ -89,7 +94,7 @@ RejectedAtStepMoreThanOneApplicants bb
 left join rejectedApplicants c
 on c.candidateId = bb.candidateId and c.jobId = bb.jobId and c.joinId = bb.joinId and c.step = bb.minRejectionFlag - 1
 ) d
-group by d.jobCapability, d.funnel, d.applicationAggStatus, d.applicationAggSubStatus  
+group by d.jobCapability, d.applicationAggStatus, d.applicationAggSubStatus  
 ), 
 RejectionRateTable AS (
 (
@@ -98,7 +103,9 @@ union
 select * from RejectionRateTable2
 ) ) 
 
--- select sum(numApplicants) from RejectionRateTable
+-- select sum(numApplicants) from RejectionRateTable --4172
 
 -- IF EXISTS(SELECT * FROM dbo.RejectionRateTable) DROP TABLE dbo.RejectionRateTable
 SELECT * INTO dbo.RejectionRateTable FROM RejectionRateTable
+
+SELECT * FROM RejectionRateTable; 
