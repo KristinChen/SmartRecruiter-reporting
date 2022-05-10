@@ -1,6 +1,23 @@
--- select distinct candidateid, jobid from ValidEvents where eventtype like '%application re-submitted%' ---526
+-- before clean -----------------------------------
+-- good resubmitted example
+-- select distinct eventId, candidateId, jobId, jobLevel, jobCapability, jobLocation, eventDate, EventType, ApplicationStatus, applicationSubStatus from ApplicationEvents_Merged where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2' and jobid = 'ace13ce4-eb17-4094-8576-39c821029a90' order by eventDate; 
+-- bad resubmitted example
+-- select distinct eventId, candidateId, jobId, jobLevel, jobCapability, jobLocation, eventDate, EventType, ApplicationStatus, applicationSubStatus from ApplicationEvents_Merged where candidateid = '02d0da8f-5018-48a0-9fd7-41acd000afec' order by eventDate; 
+-- duplicate events
+-- select distinct eventId, candidateId, jobId, jobLevel, jobCapability, jobLocation, eventDate, EventType, ApplicationStatus, applicationSubStatus from ApplicationEvents_Merged where candidateid = '0203df3c-4a3b-43c9-aaca-2501bf49dc28' and jobid = 'b0471062-acb5-474e-be73-cce25b9726dd' order by eventDate
 
-with ResubmittedCases as
+-- after clean -----------------------------------
+-- good resubmitted example - after clean
+-- select distinct eventId, candidateId, jobId, joinId, jobLevel, jobCapability, jobLocation, eventDate, EventType, ApplicationStatus, applicationSubStatus from deduplicatedValidEvents where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2' and jobid = 'ace13ce4-eb17-4094-8576-39c821029a90' order by eventDate; 
+
+-- bad resubmitted example -- after clean
+-- select distinct eventId, candidateId, jobId, joinId, jobLevel, jobCapability, jobLocation, eventDate, EventType, ApplicationStatus, applicationSubStatus from deduplicatedValidEvents where candidateid = '02d0da8f-5018-48a0-9fd7-41acd000afec' order by eventDate; 
+
+-- deduplicate
+-- select distinct eventId, candidateId, jobId, joinId, jobLevel, jobCapability, jobLocation, eventDate, EventType, ApplicationStatus, applicationSubStatus from deduplicatedValidEvents where candidateid = '0203df3c-4a3b-43c9-aaca-2501bf49dc28' and jobid = 'b0471062-acb5-474e-be73-cce25b9726dd' order by eventDate
+
+
+WITH ResubmittedCases as
 (
 select *, max(sumStartFlag) over (partition by candidateId, jobId) as maxStartFlag from 
 (
@@ -25,8 +42,7 @@ end funnel from dbo.ValidEvents
 ) c
 ),
 
--- good ones: end the funnel before rejoinning
--- good resubmitted example: select * from ClosedResubmittedCases where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2'; 
+
 ClosedResubmittedCases as 
 (
 select v.*, v.sumStartFlag joinId from 
@@ -38,11 +54,6 @@ resubmittedCases v
 on v.candidateId = b.candidateId and v.jobId = b.jobid and v.sumStartFlag < b.sumStartFlag
 ),
 
--- select * from ClosedResubmittedCases where candidateid = '0067828a-1eb5-4a3e-9afa-330b72f30bb2'; 
-
--- bad ones...remove ---------------------------
--- bad resubmitted example: select * from ResubmittedCases where candidateid = '02d0da8f-5018-48a0-9fd7-41acd000afec'; 
-
 CleanedUnclosedResubmittedCases AS 
 (
 select v.*, v.sumStartFlag joinId from 
@@ -53,7 +64,6 @@ inner join resubmittedCases v
 on v.candidateId = b.candidateId and v.jobId = b.jobid and v.sumStartFlag >= b.sumStartFlag
 ),  
 
--- other cases
 UnResumbittedCases AS (
 select v.*, sumStartFlag joinId from
 (
@@ -81,12 +91,13 @@ select * from CleanedUnclosedResubmittedCases
 UNION
 select * from UnResumbittedCases 
 ) tot 
+),
+deduplicatedValidEvents AS (
+select * from 
+(select *, ROW_NUMBER() over (partition by candidateId, jobid, joinId, joblevel, jobCapability, jobLocation, applicationStatus, eventType, applicationSubStatus order by eventDate) uniqueStep from cleanedTable) a
+where uniqueStep = 1
 )
---distinct concat(candidateid, jobid): 9955; concat(candidateid, jobid, joinId): 10534
--- select * from ClosedResubmittedCases; 
---select * from CleanedUnclosedResubmittedCases; 
--- select * from UnResumbittedCases where joinId != 1; 
--- select * from UnResumbittedCases where candidateid = '001baac4-baec-40ca-aac6-c9c8cecd477c' --needed to be further clean; 
 
 -- IF EXISTS(SELECT * FROM dbo.CleanedValidEvents) DROP TABLE dbo.CleanedValidEvents
-SELECT * INTO dbo.CleanedValidEvents FROM cleanedTable;
+SELECT * INTO dbo.CleanedValidEvents FROM deduplicatedValidEvents;
+
