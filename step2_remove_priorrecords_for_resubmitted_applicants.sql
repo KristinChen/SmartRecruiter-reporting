@@ -17,7 +17,43 @@
 -- select distinct eventId, candidateId, jobId, joinId, jobLevel, jobCapability, jobLocation, eventDate, EventType, ApplicationStatus, applicationSubStatus from deduplicatedValidEvents where candidateid = '0203df3c-4a3b-43c9-aaca-2501bf49dc28' and jobid = 'b0471062-acb5-474e-be73-cce25b9726dd' order by eventDate
 
 
-WITH ResubmittedCases as
+With deDuplicatedNewData AS (
+select distinct * from
+(
+select *,
+    max(sumNewFlag) over (partition by candidateId, jobId) as maxNewFlag
+    -- max(sumUpdatedRejectionFlag) over (partition by candidateId, jobId) as maxUpdatedRejectionFlag,
+    -- max(sumUpdatedHiredFlag) over (partition by candidateId, jobId) as maxUpdatedHiredFlag,
+    -- max(sumUpdatedWithdrawnFlag) over (partition by candidateId, jobId) as maxUpdatedWithdrawnFlag,
+    -- max(sumUpdatedTransferredFlag) over (partition by candidateId, jobId) as maxUpdatedTransferredFlag,
+    -- min(sumNewFlag) over (partition by candidateId, jobId) as minNewFlag,
+    -- min(sumUpdatedRejectionFlag) over (partition by candidateId, jobId) as minUpdatedRejectionFlag,
+    -- min(sumUpdatedHiredFlag) over (partition by candidateId, jobId) as minUpdatedHiredFlag,
+    -- min(sumUpdatedWithdrawnFlag) over (partition by candidateId, jobId) as minUpdatedWithdrawnFlag,
+    -- min(sumUpdatedTransferredFlag) over (partition by candidateId, jobId) as minUpdatedTransferredFlag
+from 
+(
+select *,
+    SUM(newFlag) OVER (PARTITION BY candidateId, jobId order by eventDate) as sumNewFlag
+    -- SUM(updatedRejectionFlag) OVER (PARTITION BY candidateId, jobId order by eventDate) sumUpdatedRejectionFlag,
+    -- SUM(updatedHiredFlag) OVER (PARTITION BY candidateId, jobId order by eventDate) sumUpdatedHiredFlag,
+    -- SUM(updatedWithdrawnFlag) OVER (PARTITION BY candidateId, jobId order by eventDate) sumUpdatedWithdrawnFlag,
+    -- SUM(updatedTransferredFlag) OVER (PARTITION BY candidateId, jobId order by eventDate) sumUpdatedTransferredFlag
+FROM
+(select *, 
+        case when eventtype like '%application created%' and applicationStatus like '%new%' then 1 else 0 end newFlag
+        -- case when eventtype like '%application status updated%' and applicationStatus like '%rejected%' then 1 else 0 end updatedRejectionFlag,
+        -- case when eventtype like '%application status updated%' and applicationStatus like '%hired%' then 1 else 0 end updatedHiredFlag, 
+        -- case when eventtype like '%application status updated%' and applicationStatus like '%withdrawn%' then 1 else 0 end updatedWithdrawnFlag,
+        -- case when eventtype like '%application status updated%' and applicationStatus like '%transferred%' then 1 else 0 end updatedTransferredFlag  
+from ValidEvents
+) a
+) b
+) c
+where sumNewFlag = maxNewFlag --!= 229; = 26618
+)
+
+,ResubmittedCases as
 (
 select *, max(sumStartFlag) over (partition by candidateId, jobId) as maxStartFlag from 
 (
@@ -36,12 +72,11 @@ case when eventType like '%Application Re-Submitted%' then 'REJOIN'
     when eventType like '%Application Created%' then 'JOIN' 
     when applicationStatus = 'HIRED' or applicationStatus = 'TRANSFERRED' or applicationStatus = 'WITHDRAWN' or applicationStatus = 'REJECTED' then 'OUT' 
 else NULL 
-end funnel from dbo.ValidEvents
+end funnel from deDuplicatedNewData
 ) a
 ) b
 ) c
 ),
-
 
 ClosedResubmittedCases as 
 (
@@ -62,7 +97,7 @@ select distinct candidateId, jobId, sumStartFlag from ResubmittedCases where fun
 ) b
 inner join resubmittedCases v
 on v.candidateId = b.candidateId and v.jobId = b.jobid and v.sumStartFlag >= b.sumStartFlag
-),  
+),
 
 UnResumbittedCases AS (
 select v.*, sumStartFlag joinId from
@@ -100,4 +135,5 @@ where uniqueStep = 1
 
 -- IF EXISTS(SELECT * FROM dbo.CleanedValidEvents) DROP TABLE dbo.CleanedValidEvents
 SELECT * INTO dbo.CleanedValidEvents FROM deduplicatedValidEvents;
+
 

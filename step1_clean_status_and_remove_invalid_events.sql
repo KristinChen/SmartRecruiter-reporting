@@ -52,4 +52,3 @@ validCases as (
 
 -- IF EXISTS(SELECT * FROM dbo.ValidEvents) DROP TABLE dbo.ValidEvents
 SELECT * INTO dbo.ValidEvents FROM validCases;
-

@@ -1,7 +1,3 @@
--- 176
--- select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%WITHDRAWN%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
--- select count(distinct concat(candidateId, jobId, joinId)) from outData where applicationStatus like '%WITHDRAWN%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
-
 With WithdrawnApplicants AS 
 (
 select *,
@@ -44,7 +40,7 @@ on c.candidateId = m.candidateId and c.jobId = m.jobId and c.joinId = m.joinid a
 ) d
 group by d.jobCapability, d.funnel, d.applicationAggStatus, d.applicationAggSubStatus  
 )
--- select sum(numApplicants) from WithdrawnRateTable; --176
+select sum(numApplicants) from WithdrawnRateTable; --184
 
 -- IF EXISTS(SELECT * FROM dbo.WithdrawnRateTable) DROP TABLE dbo.WithdrawnRateTable
 -- SELECT * INTO dbo.WithdrawnRateTable FROM WithdrawnRateTable;

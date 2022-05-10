@@ -107,5 +107,3 @@ select * from RejectionRateTable2
 
 -- IF EXISTS(SELECT * FROM dbo.RejectionRateTable) DROP TABLE dbo.RejectionRateTable
 SELECT * INTO dbo.RejectionRateTable FROM RejectionRateTable
-
-SELECT * FROM RejectionRateTable; 

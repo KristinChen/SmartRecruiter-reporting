@@ -8,8 +8,10 @@ FROM ActiveInFunnelData c where Step = maxStep
 ) b
 group by jobCapability, jobLocation, experiencedFlag, eventType, applicationStatus, applicationSubStatus)
 
--- select count(distinct uniqueId) from ActiveInFunnelData; --503
--- select sum(numApplicants) from ActiveInFunnelLastStatusTable; --503
+-- select count(distinct uniqueId) from ActiveInFunnelData; --520
+-- select sum(numApplicants) from ActiveInFunnelLastStatusTable; --520
 
 -- IF EXISTS(SELECT * FROM  dbo.ActiveInFunnelLastStatusTable) DROP TABLE dbo.ActiveInFunnelLastStatusTable;
 SELECT * INTO dbo.ActiveInFunnelLastStatusTable FROM ActiveInFunnelLastStatusTable
+
+select * from ActiveInFunnelLastStatusTable
