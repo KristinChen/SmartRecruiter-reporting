@@ -142,7 +142,7 @@ select *, concat(candidateId, jobid) uniqueId, sumResubmittedFlag joinId from Cl
 -- IF EXISTS(SELECT * FROM dbo.ValidEvents) DROP TABLE dbo.CleanedValidEvents
 SELECT * INTO dbo.CleanedValidEvents FROM CleanedValidEvents
 
-select * from CleanedValidEvents     
+-- select * from CleanedValidEvents     
 -- where (candidateId = '02d0da8f-5018-48a0-9fd7-41acd000afec' and jobid = 'f3c7c29d-cd2c-4f97-b17c-557f29c0e6ec')
 -- where (candidateId = '00f25087-0475-485c-8396-9f4b7394208e' and jobid = '30dde34e-99e8-4bcd-9c82-a3528db3f308')
 -- where (candidateId = '07c57a82-07ad-4144-b8ad-09d8e5ec6d3b' and jobid = '30dde34e-99e8-4bcd-9c82-a3528db3f308')
