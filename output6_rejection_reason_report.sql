@@ -1,0 +1,1 @@
+select jobCapability, applicationStatusReason, count(distinct uniqueId) numApplicants from OutData where analyticalStatus like '%rejected%' group by jobCapability, applicationStatusReason --184

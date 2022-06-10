@@ -1,1 +1,1 @@
-select jobCapability, applicationStatusReason, count(distinct uniqueId) from OutData where analyticalStatus like '%withdrawn%' group by jobCapability, applicationStatusReason --184
+select jobCapability, applicationStatusReason, count(distinct uniqueId) numApplicants from OutData where analyticalStatus like '%withdrawn%' group by jobCapability, applicationStatusReason --184
