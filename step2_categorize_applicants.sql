@@ -5,10 +5,12 @@ SELECT *,
       MIN(a.step) over (partition by a.candidateId, a.jobId, a.joinId) minStep FROM 
 (
 select *, 
-      ROW_NUMBER() over (partition by candidateId, jobid, joinId order by eventDate) step
+      ROW_NUMBER() over (partition by candidateId, jobid, joinId order by eventDate) step,
+       case when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1 
+       when jobLevel like '%all-star%' then 0 else NULL end as experiencedFlag
 from CleanedValidEvents 
 ) a
-),
+), 
 
 OutData AS 
 (
@@ -60,4 +62,3 @@ select distinct * from AnalysisTable1 where uniqueId in (select uniqueId from Ac
 
 -- IF EXISTS(SELECT * FROM  dbo.outData) DROP TABLE dbo.outData;
 -- SELECT * INTO dbo.OutData FROM OutData 
-
