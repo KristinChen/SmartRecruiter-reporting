@@ -1,109 +1,239 @@
-----------------------------------------REJECTION----------------------------------------------
--- 4172
--- select count(distinct concat(candidateId, jobId, joinId)) from CleanedValidEvents where applicationStatus like '%REJECTED%' and (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%');
--- select count(distinct uniqueid) from outdata where applicationStatus like '%REJECTED%'
-
-With rejectedApplicants AS (
+-------------------------- report1  ----------------------
+WITH analyticalTable AS (
 select *,
-       ROW_NUMBER() over (partition by candidateId, jobId, joinId order by eventDate) step,
-       case when applicationStatus = 'REJECTED' then 1 else 0 end rejectionFlag
-from CleanedValidEvents where (jobCapability like '%science%' or jobCapability like '%engineering%' or jobCapability like '%intelligence%') 
-),
-RejectedAtStepOneApplicants AS (
-    select b.* from
+case when cleanedAnalyticalStatus like '%join%' then 1
+     when cleanedAnalyticalStatus like '%recruiter screen%' and jobCapability like '%engineering%' then 3
+     when cleanedAnalyticalStatus like '%recruiter screen%' and jobCapability not like '%engineering%' then 2
+     when cleanedAnalyticalStatus like '%Skills Test%' and jobCapability like '%engineering%' then 2
+     when cleanedAnalyticalStatus like '%Skills Test%' and jobCapability not like '%engineering%' then 3
+     when cleanedAnalyticalStatus like '%Hiring Team Screen%' then 4
+     when cleanedAnalyticalStatus like '%Tableau Assessment%' then 5
+     when cleanedAnalyticalStatus like '%On-Site Interview%' then 6
+     when cleanedAnalyticalStatus like '%Offer Pending%' then 7
+     when cleanedAnalyticalStatus like '%HIRED%' then 8
+     when cleanedAnalyticalStatus like '%rejected%' then 9
+     when cleanedAnalyticalStatus like '%withdrawn%' then 10
+     when cleanedAnalyticalStatus like '%transferred%' then 11
+     else NULL end as idx
+from 
 (
-    select candidateid, jobid, joinid, min(step) as minRejectionFlag from rejectedApplicants where rejectionFlag = 1 group by candidateId, jobId, joinid
+select * , 
+      lag(analyticalStatus, 1) over (partition by uniqueId order by eventDate) as lastStatus, 
+      lag(analyticalStatus, 2) over (partition by uniqueId order by eventDate) as lastStatus2, 
+      lag(analyticalStatus, 3) over (partition by uniqueId order by eventDate) as lastStatus3, 
+      lag(analyticalStatus, 4) over (partition by uniqueId order by eventDate) as lastStatus4, 
+      lag(analyticalStatus, 5) over (partition by uniqueId order by eventDate) as lastStatus5, 
+      lag(analyticalStatus, 6) over (partition by uniqueId order by eventDate) as lastStatus6, 
+      lag(analyticalStatus, 7) over (partition by uniqueId order by eventDate) as lastStatus7, 
+      lag(analyticalStatus, 8) over (partition by uniqueId order by eventDate) as lastStatus8, 
+      lag(analyticalStatus, 9) over (partition by uniqueId order by eventDate) as lastStatus9, 
+      lag(analyticalStatus, 10) over (partition by uniqueId order by eventDate) as lastStatus10, 
+      lead(analyticalStatus, 1) over (partition by uniqueId order by eventDate) as nextStatus, 
+      lead(analyticalStatus, 2) over (partition by uniqueId order by eventDate) as nextStatus2, 
+      lead(analyticalStatus, 3) over (partition by uniqueId order by eventDate) as nextStatus3, 
+      lead(analyticalStatus, 4) over (partition by uniqueId order by eventDate) as nextStatus4, 
+      lead(analyticalStatus, 5) over (partition by uniqueId order by eventDate) as nextStatus5, 
+      lead(analyticalStatus, 6) over (partition by uniqueId order by eventDate) as nextStatus6, 
+      lead(analyticalStatus, 7) over (partition by uniqueId order by eventDate) as nextStatus7, 
+      lead(analyticalStatus, 8) over (partition by uniqueId order by eventDate) as nextStatus8, 
+      lead(analyticalStatus, 9) over (partition by uniqueId order by eventDate) as nextStatus9, 
+      lead(analyticalStatus, 10) over (partition by uniqueId order by eventDate) as nextStatus10, 
+      case when jobLevel like '%all-star%' then 0
+           when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1
+           else NULL
+      end experienceFlag,
+      case when analyticalStatus like '%join%' or analyticalStatus like '%rejoin%' then 'JOIN' else analyticalStatus END as cleanedAnalyticalStatus
+from OutData
+) c
+where experienceFlag is not null 
+)
+-- SELECT count(distinct uniqueId) FROM analyticalTable WHERE cleanedAnalyticalStatus LIKE '%rejected%' --3574 rows; 3058 uniqueId
+
+
+-- 1. total applicants make it to recruiter screen: 1377 + 1103
+Applicants_afterrs AS (
+select jobCapability, experienceFlag, count(distinct uniqueId) numApplicants from
+(
+select * from analyticalTable where step = maxStep and cleanedAnalyticalStatus not like '%join%' and cleanedAnalyticalStatus not like '%rejoin%' and cleanedAnalyticalStatus not like '%rejected%'
+union all 
+select * from analyticalTable where step = maxStep and cleanedAnalyticalStatus like '%rejected%' and maxStep > 2
+) a
+group by jobCapability, experienceFlag
+),
+
+-- 3. total number of withdrawn applicants
+rejectedApplicants_total AS (
+select jobCapability, experienceFlag,  count(distinct uniqueId) totalRejectedApplicants from analyticalTable where cleanedAnalyticalStatus like '%rejected%' 
+group by jobCapability, experienceFlag
+),
+ 
+rejectedApplicants_afterhs AS ( 
+select jobCapability, experienceFlag, count(distinct uniqueId) numRejectedApplicant_afterhiringscreen from
+(
+select *, 
+case when nextStatus like '%rejected%' then 1 
+      when nextStatus2 like '%rejected%' then 1 
+      when nextStatus3 like '%rejected%' then 1 
+      when nextStatus4 like '%rejected%' then 1 
+      when nextStatus5 like '%rejected%' then 1 
+      when nextStatus6 like '%rejected%' then 1 
+      when nextStatus7 like '%rejected%' then 1 
+      when nextStatus8 like '%rejected%' then 1 
+      when nextStatus9 like '%rejected%' then 1 
+      when nextStatus10 like '%rejected%' then 1 
+      else 0 
+      end as rejectedFlag 
+from analyticalTable where cleanedAnalyticalStatus like '%hiring team screen%') b where rejectedFlag = 1 
+group by jobCapability, experienceFlag
+)
+
+-- select a.jobCapability, a.experienceFlag, a.numApplicants numApplicants_makeittoRecruiterScreen, b.totalRejectedApplicants, c.numRejectedApplicant_afterhiringscreen from 
+-- Applicants_afterrs a 
+-- join rejectedApplicants_total b
+-- on a.jobCapability = b.jobCapability and a.experienceFlag = b.experienceFlag 
+-- join rejectedApplicants_afterhs c
+-- on a.jobCapability = c.jobCapability and a.experienceFlag = c.experienceFlag 
+
+-- 2. last funnel before rejected
+select jobCapability, experienceFlag, idx, cleanedAnalyticalStatus, count(distinct uniqueId) numApplicants from
+(
+select *, 
+case when nextStatus like '%rejected%' then 1 
+      when nextStatus2 like '%rejected%' then 1 
+      when nextStatus3 like '%rejected%' then 1 
+      when nextStatus4 like '%rejected%' then 1 
+      when nextStatus5 like '%rejected%' then 1 
+      when nextStatus6 like '%rejected%' then 1 
+      when nextStatus7 like '%rejected%' then 1 
+      when nextStatus8 like '%rejected%' then 1 
+      when nextStatus9 like '%rejected%' then 1 
+      when nextStatus10 like '%rejected%' then 1 
+      else 0 
+      end as rejectedFlag 
+from analyticalTable) b where rejectedFlag = 1 and nextStatus like '%rejected%'
+group by jobCapability, experienceFlag, cleanedAnalyticalStatus,  idx 
+order by jobCapability, experienceFlag, idx 
+
+
+-------------------------- report2  ----------------------
+WITH analyticalTable AS (
+
+select *,
+case when cleanedAnalyticalStatus like '%join%' then 1
+     when cleanedAnalyticalStatus like '%recruiter screen%' and jobCapability like '%engineering%' then 3
+     when cleanedAnalyticalStatus like '%recruiter screen%' and jobCapability not like '%engineering%' then 2
+     when cleanedAnalyticalStatus like '%Skills Test%' and jobCapability like '%engineering%' then 2
+     when cleanedAnalyticalStatus like '%Skills Test%' and jobCapability not like '%engineering%' then 3
+     when cleanedAnalyticalStatus like '%Hiring Team Screen%' then 4
+     when cleanedAnalyticalStatus like '%Tableau Assessment%' then 5
+     when cleanedAnalyticalStatus like '%On-Site Interview%' then 6
+     when cleanedAnalyticalStatus like '%Offer Pending%' then 7
+     when cleanedAnalyticalStatus like '%HIRED%' then 8
+     when cleanedAnalyticalStatus like '%rejected%' then 9
+     when cleanedAnalyticalStatus like '%withdrawn%' then 10
+     when cleanedAnalyticalStatus like '%transferred%' then 11
+     else NULL end as idx
+from 
+(
+select * , 
+      lag(analyticalStatus, 1) over (partition by uniqueId order by eventDate) as lastStatus, 
+      lag(analyticalStatus, 2) over (partition by uniqueId order by eventDate) as lastStatus2, 
+      lag(analyticalStatus, 3) over (partition by uniqueId order by eventDate) as lastStatus3, 
+      lag(analyticalStatus, 4) over (partition by uniqueId order by eventDate) as lastStatus4, 
+      lag(analyticalStatus, 5) over (partition by uniqueId order by eventDate) as lastStatus5, 
+      lag(analyticalStatus, 6) over (partition by uniqueId order by eventDate) as lastStatus6, 
+      lag(analyticalStatus, 7) over (partition by uniqueId order by eventDate) as lastStatus7, 
+      lag(analyticalStatus, 8) over (partition by uniqueId order by eventDate) as lastStatus8, 
+      lag(analyticalStatus, 9) over (partition by uniqueId order by eventDate) as lastStatus9, 
+      lag(analyticalStatus, 10) over (partition by uniqueId order by eventDate) as lastStatus10, 
+      lead(analyticalStatus, 1) over (partition by uniqueId order by eventDate) as nextStatus, 
+      lead(analyticalStatus, 2) over (partition by uniqueId order by eventDate) as nextStatus2, 
+      lead(analyticalStatus, 3) over (partition by uniqueId order by eventDate) as nextStatus3, 
+      lead(analyticalStatus, 4) over (partition by uniqueId order by eventDate) as nextStatus4, 
+      lead(analyticalStatus, 5) over (partition by uniqueId order by eventDate) as nextStatus5, 
+      lead(analyticalStatus, 6) over (partition by uniqueId order by eventDate) as nextStatus6, 
+      lead(analyticalStatus, 7) over (partition by uniqueId order by eventDate) as nextStatus7, 
+      lead(analyticalStatus, 8) over (partition by uniqueId order by eventDate) as nextStatus8, 
+      lead(analyticalStatus, 9) over (partition by uniqueId order by eventDate) as nextStatus9, 
+      lead(analyticalStatus, 10) over (partition by uniqueId order by eventDate) as nextStatus10, 
+      case when jobLevel like '%all-star%' then 0
+           when jobLevel not like '%all-star%' and jobLevel not like '%intern%' then 1
+           else NULL
+      end experienceFlag,
+      case when analyticalStatus like '%join%' or analyticalStatus like '%rejoin%' then 'JOIN' else analyticalStatus END as cleanedAnalyticalStatus, 
+      max(step) over (partition by uniqueId) maxStep
+from
+(
+select distinct eventId, candidateId, jobId, jobLevel, jobCapability, jobLocation, eventDate, eventType, applicationStatus, applicationSubstatus, applicationSource, applicationStatusReason, resubmittedFlag, sumResubmittedFlag, analyticalStatus, joinId,
+      ROW_NUMBER() over (partition by candidateId, jobid, joinId order by eventDate) step, 
+      concat(candidateId, '&', jobId, '&', joinId) as uniqueId
+from CleanedValidEvents
 ) b
-where minRejectionFlag = 1
+) c
+where experienceFlag is not null 
 ),
 
--- select * from RejectedAtStepOneApplicants --56 (correct)
-
-RejectedAtStepMoreThanOneApplicants AS (
-    select b.* from
+-- 1. total applicants make it to recruiter screen: 1377 + 1103
+Applicants_afterrs AS (
+select jobCapability, experienceFlag, jobLocation, count(distinct uniqueId) numApplicants from
 (
-    select candidateid, jobid, joinid, min(step) as minRejectionFlag from rejectedApplicants where rejectionFlag = 1 group by candidateId, jobId, joinid
-) b
-where minRejectionFlag > 1
+select * from analyticalTable where step = maxStep and cleanedAnalyticalStatus not like '%join%' and cleanedAnalyticalStatus not like '%rejoin%' and cleanedAnalyticalStatus not like '%rejected%'
+union all 
+select * from analyticalTable where step = maxStep and cleanedAnalyticalStatus like '%rejected%' and maxStep > 2
+) a
+group by jobCapability, experienceFlag, jobLocation
 ),
 
--- select * from RejectedAtStepMoreThanOneApplicants --4116 (correct)
-
-RejectionRateTable1 AS (
-select d.jobCapability, 'REJECTED RIGHT THE WAY' applicationAggStatus, d.applicationAggSubStatus, count(distinct concat(candidateId, jobId, joinId)) as numApplicants from
-(
-select  distinct c.*, 
-    bb.minRejectionFlag,
-    
-    case when funnel like '%join%' or funnel like '%rejoin%' then 'NEW' 
-         when funnel IS NULL then 'IN_REVIEW' 
-         else applicationStatus
-         end applicationAggStatus,
-
-    case when (jobCapability like '%engineer%' or jobCapability like '%business%') and (joblevel like 'all-star') and (applicationSubStatus like '%resume review%' or applicationSubStatus like '%recruiter screen%') then 'Recruiter Screen' 
-        when (jobCapability like '%engineer%' or jobCapability like '%business%') and (joblevel like 'all-star') and (applicationSubStatus like '%manager%' or applicationSubStatus like '%hiring team screen%') then 'Hiring Team Screen' 
-        when (jobCapability like '%engineer%' or jobCapability like '%business%') and (joblevel like 'all-star') and (applicationSubStatus like '%offer%' or applicationSubStatus like '%caucus%') then 'Offer Pending'
-        
-        when (jobCapability like '%science%') and (joblevel like 'all-star') and (applicationSubStatus like '%resume review%' or applicationSubStatus like '%recruiter screen%') then 'Resume Review' 
-        when (jobCapability like '%science%') and (joblevel like 'all-star') and (applicationSubStatus like '%manager%' or applicationSubStatus like '%hiring team screen%') then 'Hiring Team Screen' 
-        when (jobCapability like '%science%') and (joblevel like 'all-star') and (applicationSubStatus like '%offer%' or applicationSubStatus like '%caucus%') then 'Offer Pending' 
-
-        -- experienced
-        when joblevel not like 'all-star' and (applicationSubStatus like '%resume review%' or applicationSubStatus like '%recruiter screen%') then 'Resume Review' 
-        when joblevel not like 'all-star' and (applicationSubStatus like '%manager%' or applicationSubStatus like '%hiring team screen%') then 'Hiring Team Screen' 
-        when joblevel not like 'all-star' and (applicationSubStatus like '%offer%' or applicationSubStatus like '%caucus%') then 'Offer Pending' 
-        when joblevel not like 'all-star' and (applicationSubStatus like '%warm%' or applicationSubStatus like '%test%' or applicationSubStatus like '%interview%') then 'On-Site Interview' 
-        else applicationSubStatus
-        end applicationAggSubStatus 
-FROM
-RejectedAtStepOneApplicants bb
-left join rejectedApplicants c
-on c.candidateId = bb.candidateId and c.jobId = bb.jobId and c.joinId = bb.joinId and c.step = bb.minRejectionFlag
-) d
-group by d.jobCapability, d.applicationAggStatus, d.applicationAggSubStatus  
+-- 3. total number of withdrawn applicants
+rejectedApplicants_total AS (
+select jobCapability, experienceFlag,  jobLocation, count(distinct uniqueId) totalRejectedApplicants from analyticalTable where cleanedAnalyticalStatus like '%rejected%' 
+group by jobCapability, experienceFlag, jobLocation
 ),
-
-RejectionRateTable2 AS (
-select d.jobCapability, d.applicationAggStatus, d.applicationAggSubStatus, count(distinct concat(candidateId, jobId, joinId)) as numApplicants from
+ 
+rejectedApplicants_afterhs AS ( 
+select jobCapability, experienceFlag, jobLocation, count(distinct uniqueId) numRejectedApplicant_afterhiringscreen from
 (
-select  distinct c.*, 
-    bb.minRejectionFlag,
-    
-    case when funnel like '%join%' or funnel like '%rejoin%' then 'NEW' 
-         when funnel IS NULL then 'IN_REVIEW' 
-         else applicationStatus
-         end applicationAggStatus,
+select *, 
+case when nextStatus like '%rejected%' then 1 
+      when nextStatus2 like '%rejected%' then 1 
+      when nextStatus3 like '%rejected%' then 1 
+      when nextStatus4 like '%rejected%' then 1 
+      when nextStatus5 like '%rejected%' then 1 
+      when nextStatus6 like '%rejected%' then 1 
+      when nextStatus7 like '%rejected%' then 1 
+      when nextStatus8 like '%rejected%' then 1 
+      when nextStatus9 like '%rejected%' then 1 
+      when nextStatus10 like '%rejected%' then 1 
+      else 0 
+      end as rejectedFlag 
+from analyticalTable where cleanedAnalyticalStatus like '%hiring team screen%') b where rejectedFlag = 1 
+group by jobCapability, experienceFlag, jobLocation
+)
 
-    case when (jobCapability like '%engineer%' or jobCapability like '%business%') and (joblevel like 'all-star') and (applicationSubStatus like '%resume review%' or applicationSubStatus like '%recruiter screen%') then 'Recruiter Screen' 
-        when (jobCapability like '%engineer%' or jobCapability like '%business%') and (joblevel like 'all-star') and (applicationSubStatus like '%manager%' or applicationSubStatus like '%hiring team screen%') then 'Hiring Team Screen' 
-        when (jobCapability like '%engineer%' or jobCapability like '%business%') and (joblevel like 'all-star') and (applicationSubStatus like '%offer%' or applicationSubStatus like '%caucus%') then 'Offer Pending'
-        
-        when (jobCapability like '%science%') and (joblevel like 'all-star') and (applicationSubStatus like '%resume review%' or applicationSubStatus like '%recruiter screen%') then 'Resume Review' 
-        when (jobCapability like '%science%') and (joblevel like 'all-star') and (applicationSubStatus like '%manager%' or applicationSubStatus like '%hiring team screen%') then 'Hiring Team Screen' 
-        when (jobCapability like '%science%') and (joblevel like 'all-star') and (applicationSubStatus like '%offer%' or applicationSubStatus like '%caucus%') then 'Offer Pending' 
+select a.jobCapability, a.experienceFlag, a.jobLocation, a.numApplicants numApplicants_makeittoRecruiterScreen, b.totalRejectedApplicants, c.numRejectedApplicant_afterhiringscreen from 
+Applicants_afterrs a 
+join rejectedApplicants_total b
+on a.jobCapability = b.jobCapability and a.experienceFlag = b.experienceFlag and a.jobLocation = b.jobLocation  
+join rejectedApplicants_afterhs c
+on a.jobCapability = c.jobCapability and a.experienceFlag = c.experienceFlag and a.jobLocation = c.jobLocation  
 
-        -- experienced
-        when joblevel not like 'all-star' and (applicationSubStatus like '%resume review%' or applicationSubStatus like '%recruiter screen%') then 'Resume Review' 
-        when joblevel not like 'all-star' and (applicationSubStatus like '%manager%' or applicationSubStatus like '%hiring team screen%') then 'Hiring Team Screen' 
-        when joblevel not like 'all-star' and (applicationSubStatus like '%offer%' or applicationSubStatus like '%caucus%') then 'Offer Pending' 
-        when joblevel not like 'all-star' and (applicationSubStatus like '%warm%' or applicationSubStatus like '%test%' or applicationSubStatus like '%interview%') then 'On-Site Interview' 
-        else applicationSubStatus
-        end applicationAggSubStatus 
-FROM
-RejectedAtStepMoreThanOneApplicants bb
-left join rejectedApplicants c
-on c.candidateId = bb.candidateId and c.jobId = bb.jobId and c.joinId = bb.joinId and c.step = bb.minRejectionFlag - 1
-) d
-group by d.jobCapability, d.applicationAggStatus, d.applicationAggSubStatus  
-), 
-RejectionRateTable AS (
+-- 2. last funnel before rejected
+select jobCapability, experienceFlag, jobLocation, idx, cleanedAnalyticalStatus, count(distinct uniqueId) numApplicants from
 (
-select * from RejectionRateTable1
-union 
-select * from RejectionRateTable2
-) ) 
+select *, 
+case when nextStatus like '%rejected%' then 1 
+      when nextStatus2 like '%rejected%' then 1 
+      when nextStatus3 like '%rejected%' then 1 
+      when nextStatus4 like '%rejected%' then 1 
+      when nextStatus5 like '%rejected%' then 1 
+      when nextStatus6 like '%rejected%' then 1 
+      when nextStatus7 like '%rejected%' then 1 
+      when nextStatus8 like '%rejected%' then 1 
+      when nextStatus9 like '%rejected%' then 1 
+      when nextStatus10 like '%rejected%' then 1 
+      else 0 
+      end as rejectedFlag 
+from analyticalTable) b where rejectedFlag = 1 and nextStatus like '%rejected%'
+group by jobCapability, experienceFlag, jobLocation, cleanedAnalyticalStatus,  idx 
+order by jobCapability, experienceFlag, jobLocation, idx 
 
--- select sum(numApplicants) from RejectionRateTable --4172
-
--- IF EXISTS(SELECT * FROM dbo.RejectionRateTable) DROP TABLE dbo.RejectionRateTable
-SELECT * INTO dbo.RejectionRateTable FROM RejectionRateTable
